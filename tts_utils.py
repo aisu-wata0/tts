@@ -1,0 +1,150 @@
+
+import winsound
+
+def playFile(filename):
+  winsound.PlaySound(filename, winsound.SND_FILENAME)
+
+
+
+from typing import Any, Dict, List
+from pathlib import Path
+
+from python_utils_aisu import utils
+
+class Tts:
+  def __init__(
+      self,
+      url: str,
+      port,
+      speakers: Dict[str, str],
+      synthesis_parameters: Dict[str, Any],
+      soundfile_dir: str,
+      soundfile_name_timestamp: bool=False,
+      soundfile_name_parameters: bool=False,
+  ):
+    self.url = url
+    self.port = port
+    self.speakers = speakers
+    self.synthesis_parameters = synthesis_parameters
+    self.soundfile_dir = soundfile_dir
+    self.soundfile_name_timestamp = soundfile_name_timestamp
+    self.soundfile_name_parameters = soundfile_name_parameters
+
+  def get_url(self, speaker_id=None):
+    return self.url.format(port=self.port, speaker_id=speaker_id)
+  
+  def get_filepath(self, speaker_id, synthesis_parameters={}):
+    fpath = f"{self.soundfile_dir}/{speaker_id}"
+    if self.soundfile_name_timestamp:
+      fpath = f"{fpath}-{utils.get_timestamp()}"
+    if self.soundfile_name_parameters:
+      fpath = f"{fpath} {utils.string_parameters(synthesis_parameters)[:80]}"
+    return f'{fpath}.wav'
+
+  def Synthesis(self, text, speaker_id=None, synthesis_parameters={}):
+    # Should return wav data
+    pass
+
+  def get_speaker_id(self, speaker_id):
+    if speaker_id is None:
+      speaker_id = self.speakers['default']
+    return speaker_id
+
+  def SynthesisSaveWav(self, text, speaker_id=None, synthesis_parameters={}, filepath=None):
+    speaker_id = self.get_speaker_id(speaker_id)
+    if filepath is None:
+      filepath = self.get_filepath(speaker_id)
+    synthesis_res = self.Synthesis(
+        text, speaker_id, synthesis_parameters)
+    return self.SynthesisResponseSaveWav(synthesis_res, filepath)
+
+  def SynthesisResponseSaveWav(self, wavData, filepath):
+    Path(filepath).parent.mkdir(parents=True, exist_ok=True)
+    with open(filepath, "wb") as outfile:
+      outfile.write(wavData)
+    return filepath
+
+import logging
+import re
+
+prose_type = Dict[str, Any]
+prose_sections_type = List[prose_type]
+
+def tts_splitter(text: str, speakers: Dict[str, str]) -> prose_sections_type:
+    prose_sections = extract_prose_sections(text)
+    for s in prose_sections:
+        s['tts_args'] = {}
+        try:
+            if s['type'] == 'speaker':
+                if s['name'] not in speakers:
+                    s['tts_args']['speaker_id'] = speakers['speaker-default']
+                else:
+                    s['tts_args']['speaker_id'] = speakers[s['name']]
+            else:
+                if s['type'] in speakers:
+                  s['tts_args']['speaker_id'] = speakers[s['type']]
+                else:
+                  s['tts_args']['speaker_id'] = speakers['default']
+        except Exception:
+            logging.exception(f"While setting tts_args for prose_section {s}")
+    return prose_sections
+
+
+def extract_prose_sections(input_string: str) -> prose_sections_type:
+    # Define regex patterns for different section types
+    speaker_pattern = r'\n([^:\n]+):[^\S\r\n]*([^\n]+)\n'
+    dialogue_pattern = r'"([^"]*)"'
+    narration_pattern = r'([^"\n]+)'
+
+    # Initialize the list to store extracted sections
+    sections = []
+
+    # Initialize the starting index for the next section
+    start_index = 0
+
+    # Iterate through the input string and extract sections
+    for match in re.finditer(rf'{speaker_pattern}|{dialogue_pattern}|{narration_pattern}', input_string):
+        section_start = match.start()
+        section_end = match.end()
+        print("match", match)
+        # # Check if there is any text between the previous section and the current match
+        # if start_index < section_start:
+        #     narration_content = input_string[start_index:section_start].strip()
+        #     sections.append({"type": "narration", "content": narration_content})
+        
+        if match.group(4):
+            sections.append({"type": "narration", "content": match.group(4).strip()})
+
+        # Extract speaker section
+        if match.group(1):
+            speaker_name = match.group(1).strip()
+            related_content = match.group(2).strip()
+            speaker_sections = extract_prose_sections(related_content)
+
+            speaker_object = {
+                "type": "speaker",
+                "name": speaker_name,
+                "content": related_content,
+                "sections": speaker_sections,
+            }
+            sections.append(speaker_object)
+        # Extract dialogue section
+        elif match.group(3):
+            dialogue_content = match.group(3).strip()
+            sections.append({"type": "dialogue", "content": dialogue_content})
+
+        start_index = section_end
+
+    # Check if there is any remaining text after the last section
+    if start_index < len(input_string):
+        narration_content = input_string[start_index:].strip()
+        sections.append({"type": "narration", "content": narration_content})
+
+    return sections
+
+
+def prose_sections_to_text(prose_sections: prose_sections_type, k_name='content') -> str:
+  text = ""
+  for t in prose_sections:
+      text += t[k_name] + "\n"
+  return text
