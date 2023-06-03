@@ -1,12 +1,43 @@
 
-import winsound
+from python_utils_aisu import utils
+logger = utils.loggingGetLogger(__name__)
+logger.setLevel('INFO')
 
-def playFile(filename):
-  winsound.PlaySound(filename, winsound.SND_FILENAME)
+# import winsound
+
+# def playFile(filename):
+#   winsound.PlaySound(filename, winsound.SND_FILENAME)
+
+import sounddevice as sd
+import numpy as np
+import wavfile
+
+def playFile(filename, device=None):
+  # Load the wav file
+  # with open(filename, 'rb') as (fs1):
+  with wavfile.open(filename, 'r') as f:
+    sd.play(f.read_float(f.num_frames), f.sample_rate, device=device)
+    sd.wait()
 
 
 
-from typing import Any, Dict, List
+def playFileDelete(filepath, device=None, playFile=playFile) -> bool:
+    try:
+        playFile(filepath, device=device)
+    except Exception as e:
+        logging.exception(f"While playing {filepath}")
+        return False
+    finally:
+        try:
+            if filepath and Path(filepath).exists():
+                Path(filepath).unlink()
+        except Exception as e:
+            logging.exception(f"While deleting {filepath}")
+            return False
+    return True
+
+
+from typing import Any, Dict, List, Optional
 from pathlib import Path
 
 from python_utils_aisu import utils
@@ -19,7 +50,7 @@ class Tts:
       speakers: Dict[str, str],
       synthesis_parameters: Dict[str, Any],
       soundfile_dir: str,
-      soundfile_name_timestamp: bool=False,
+      soundfile_name_timestamp: bool=True,
       soundfile_name_parameters: bool=False,
   ):
     self.url = url
@@ -106,7 +137,7 @@ def extract_prose_sections(input_string: str) -> prose_sections_type:
     for match in re.finditer(rf'{speaker_pattern}|{dialogue_pattern}|{narration_pattern}', input_string):
         section_start = match.start()
         section_end = match.end()
-        print("match", match)
+        logger.info(f"extract_prose_sections: match {match}")
         # # Check if there is any text between the previous section and the current match
         # if start_index < section_start:
         #     narration_content = input_string[start_index:section_start].strip()
@@ -148,3 +179,21 @@ def prose_sections_to_text(prose_sections: prose_sections_type, k_name='content'
   for t in prose_sections:
       text += t[k_name] + "\n"
   return text
+
+import time
+import queue
+from dataclasses import dataclass
+
+@dataclass
+class SoundFile:
+    filepath: str
+    delay: float
+    device: Optional[str]
+
+def play_files_from_queue(file_queue: "queue.Queue[SoundFile]"):
+    while True:
+        soundfile = file_queue.get()
+        if soundfile.delay > 0:
+            time.sleep(soundfile.delay)  # Add the custom delay
+        playFileDelete(soundfile.filepath, device=soundfile.device)
+        file_queue.task_done()
