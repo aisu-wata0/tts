@@ -39,7 +39,6 @@ class TtsVits(tts_utils.Tts):
     synthesis_parameters['content'] = text
 
     url = self.get_url(speaker_id)
-    print("url", url)
     response = requests.post(url, json={
       "data": [
         synthesis_parameters['content'],
