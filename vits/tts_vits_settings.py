@@ -5,9 +5,11 @@ url = "http://127.0.0.1:{port}/run/tts-{speaker_id}"
 soundfile_dir = "soundfiles"
 
 speaker_id = "Tendou Alice"
-
+# Tendou Alice
+# Misono Mika
+# Shiromi Iori
 speakers = {
-    'narration': "Misono Mika",
+    'narration': "Shiromi Iori",
     'dialogue': "Tendou Alice",
     'speaker-default': "Misono Mika",
     'default': "Misono Mika",
@@ -15,17 +17,17 @@ speakers = {
 
 synthesis_parameters = {
 	#   "content": "",
-	#   # : string, // represents text string of 'Text' Textbox component
+	#   # : string
 	'Language': "Japanese",
-	#  : string, // represents selected choice of 'Language' Dropdown component
+	#  : string
 	'noise_scale': 0.6,
-	#  : number, // represents selected value of 'noise_scale' Slider component
+	#  : number
 	'noise_scale_w': 0.668,
-	#  : number, // represents selected value of 'noise_scale_w' Slider component
+	#  : number
 	'length_scale': 1,
-	#  : number, // represents selected value of 'length_scale' Slider component
+	#  : number
 	'Symbol input': False,
-	#  : boolean, // represents checked status of 'Symbol input' Checkbox component
+	#  : boolean
 }
 
 # "Tendou Alice",
