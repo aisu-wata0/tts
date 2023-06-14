@@ -123,7 +123,7 @@ def tts_splitter(text: str, speakers: Dict[str, str]) -> prose_sections_type:
 
 def extract_prose_sections(input_string: str) -> prose_sections_type:
     # Define regex patterns for different section types
-    speaker_pattern = r'\n([^:\n]+):[^\S\r\n]*([^\n]+)\n'
+    speaker_pattern = r'(?:\n|^)([^:\n]+):[^\S\r\n]*([^\n]+)(?=\n|$)'
     dialogue_pattern = r'"([^"]*)"'
     narration_pattern = r'([^"\n]+)'
 
@@ -137,7 +137,7 @@ def extract_prose_sections(input_string: str) -> prose_sections_type:
     for match in re.finditer(rf'{speaker_pattern}|{dialogue_pattern}|{narration_pattern}', input_string):
         section_start = match.start()
         section_end = match.end()
-        logger.info(f"extract_prose_sections: match {match}")
+        logger.info(f"extract_prose_sections: match {match.groups()}")
         # # Check if there is any text between the previous section and the current match
         # if start_index < section_start:
         #     narration_content = input_string[start_index:section_start].strip()
