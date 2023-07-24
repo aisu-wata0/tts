@@ -4,16 +4,29 @@ url = "http://127.0.0.1:{port}/run/tts-{speaker_id}"
 
 soundfile_dir = "soundfiles"
 
-speaker_id = "Tendou Alice"
-# Tendou Alice
-# Misono Mika
-# Shiromi Iori
 speakers = {
-    'narration': "Shiromi Iori",
+    # 'narration': "Shiromi Iori",
+    # 'narration': "Tendou Alice",
+    'narration': "Misono Mika",
     'dialogue': "Tendou Alice",
     'speaker-default': "Misono Mika",
     'default': "Misono Mika",
 }
+# "Tendou Alice",
+# "Misono Mika",
+# "Shiromi Iori",
+# "Natsume Iroha",
+# "Hayase Yuuka",
+# "Saiba Momoi",
+# "Ameth",
+# "Kyoka",
+# "Yuni",
+# "Hatsune",
+# "Pecorine",
+# "Kokoro",
+# "Kyaru",
+# "Herrscher of Reason",
+# "Theresa",
 
 synthesis_parameters = {
 	#   "content": "",
@@ -29,18 +42,3 @@ synthesis_parameters = {
 	'Symbol input': False,
 	#  : boolean
 }
-
-# "Tendou Alice",
-# "Natsume Iroha",
-# "Hayase Yuuka",
-# "Misono Mika",
-# "Saiba Momoi",
-# "Ameth",
-# "Kyoka",
-# "Yuni",
-# "Hatsune",
-# "Pecorine",
-# "Kokoro",
-# "Kyaru",
-# "Herrscher of Reason",
-# "Theresa",

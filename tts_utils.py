@@ -21,19 +21,19 @@ def playFile(filename, device=None):
 
 
 
-def playFileDelete(filepath, device=None, playFile=playFile) -> bool:
+def playFileDelete(filepath, device=None, playFile=playFile, delete_file=True) -> bool:
     try:
         playFile(filepath, device=device)
     except Exception as e:
-        logging.exception(f"While playing {filepath}")
+        logger.exception(f"While playing {filepath}")
         return False
     finally:
-        try:
-            if filepath and Path(filepath).exists():
-                Path(filepath).unlink()
-        except Exception as e:
-            logging.exception(f"While deleting {filepath}")
-            return False
+        if delete_file:
+          try:
+              if filepath and Path(filepath).exists():
+                  Path(filepath).unlink()
+          except Exception as e:
+              logger.exception(f"While deleting {filepath}")
     return True
 
 
@@ -67,7 +67,7 @@ class Tts:
   def get_filepath(self, speaker_id, synthesis_parameters={}):
     fpath = f"{self.soundfile_dir}/{speaker_id}"
     if self.soundfile_name_timestamp:
-      fpath = f"{fpath}-{utils.get_timestamp()}"
+      fpath = f"{fpath}-{utils.get_timestamp('milliseconds')}"
     if self.soundfile_name_parameters:
       fpath = f"{fpath} {utils.string_parameters(synthesis_parameters)[:80]}"
     return f'{fpath}.wav'
@@ -95,13 +95,25 @@ class Tts:
       outfile.write(wavData)
     return filepath
 
-import logging
+
 import re
 
 prose_type = Dict[str, Any]
-prose_sections_type = List[prose_type]
+"""
+```python
+{
+  'type': 'narration' | 'dialogue' | 'speaker',
+  # speaker is when a section has a defined name related to the section
+  'content': related_content,
+  'name': speaker_name,
+  'sections': speaker_sections,
+  # when type == 'speaker', this is the content parsed into 'dialogue' and 'narration' (kind of recursive, `type(speaker_sections) == prose_type`)
 
-def tts_splitter(text: str, speakers: Dict[str, str]) -> prose_sections_type:
+}
+```
+"""
+
+def tts_splitter(text: str, speakers: Dict[str, str]) -> List[prose_type]:
     prose_sections = extract_prose_sections(text)
     for s in prose_sections:
         s['tts_args'] = {}
@@ -117,11 +129,11 @@ def tts_splitter(text: str, speakers: Dict[str, str]) -> prose_sections_type:
                 else:
                   s['tts_args']['speaker_id'] = speakers['default']
         except Exception:
-            logging.exception(f"While setting tts_args for prose_section {s}")
+            logger.exception(f"While setting tts_args for prose_section {s}")
     return prose_sections
 
 
-def extract_prose_sections(input_string: str) -> prose_sections_type:
+def extract_prose_sections(input_string: str) -> List[prose_type]:
     # Define regex patterns for different section types
     speaker_pattern = r'(?:\n|^)([^:\n]+):[^\S\r\n]*([^\n]+)(?=\n|$)'
     dialogue_pattern = r'"([^"]*)"'
@@ -144,7 +156,7 @@ def extract_prose_sections(input_string: str) -> prose_sections_type:
         #     sections.append({"type": "narration", "content": narration_content})
         
         if match.group(4):
-            sections.append({"type": "narration", "content": match.group(4).strip()})
+            sections.append({'type': 'narration', 'content': match.group(4).strip()})
 
         # Extract speaker section
         if match.group(1):
@@ -153,28 +165,28 @@ def extract_prose_sections(input_string: str) -> prose_sections_type:
             speaker_sections = extract_prose_sections(related_content)
 
             speaker_object = {
-                "type": "speaker",
-                "name": speaker_name,
-                "content": related_content,
-                "sections": speaker_sections,
+                'type': 'speaker',
+                'content': related_content,
+                'name': speaker_name,
+                'sections': speaker_sections,
             }
             sections.append(speaker_object)
         # Extract dialogue section
         elif match.group(3):
             dialogue_content = match.group(3).strip()
-            sections.append({"type": "dialogue", "content": dialogue_content})
+            sections.append({'type': 'dialogue', 'content': dialogue_content})
 
         start_index = section_end
 
     # Check if there is any remaining text after the last section
     if start_index < len(input_string):
         narration_content = input_string[start_index:].strip()
-        sections.append({"type": "narration", "content": narration_content})
+        sections.append({'type': 'narration', 'content': narration_content})
 
     return sections
 
 
-def prose_sections_to_text(prose_sections: prose_sections_type, k_name='content') -> str:
+def prose_sections_to_text(prose_sections: List[prose_type], k_name='content') -> str:
   text = ""
   for t in prose_sections:
       text += t[k_name] + "\n"
@@ -186,14 +198,50 @@ from dataclasses import dataclass
 
 @dataclass
 class SoundFile:
-    filepath: str
-    delay: float
-    device: Optional[str]
+  filepath: str
+  delay: float
+  device: Optional[str]
+
+  def __post_init__(self):
+     self.file = None
+
+  def delete_file(self):
+    try:
+      if self.filepath and Path(self.filepath).exists():
+        Path(self.filepath).unlink()
+    except Exception as e:
+      logger.exception(f"While deleting {self.filepath}")
+      return False
+    return True
+
+  def play(self, delete_file=False):
+    self.play_()
+    if delete_file:
+      del self.file
+      return self.delete_file()
+    return True
+
+  def play_(self):
+    if not self.file:
+      self.read()
+    if not self.file:
+      raise RuntimeError()
+    sd.play(self.file['data'], self.file['sample_rate'], device=self.device)
+    sd.wait()
+
+  def read(self):
+    with wavfile.open(self.filepath, 'r') as f:
+      self.file = {
+         'data': f.read_float(f.num_frames),
+         'sample_rate': f.sample_rate,
+      }
+     
+
 
 def play_files_from_queue(file_queue: "queue.Queue[SoundFile]"):
     while True:
         soundfile = file_queue.get()
         if soundfile.delay > 0:
-            time.sleep(soundfile.delay)  # Add the custom delay
+            time.sleep(soundfile.delay)
         playFileDelete(soundfile.filepath, device=soundfile.device)
         file_queue.task_done()
