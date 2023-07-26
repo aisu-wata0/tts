@@ -135,7 +135,8 @@ def tts_splitter(text: str, speakers: Dict[str, str]) -> List[prose_type]:
 
 def extract_prose_sections(input_string: str) -> List[prose_type]:
     # Define regex patterns for different section types
-    speaker_pattern = r'(?:\n|^)([^:\n]+):[^\S\r\n]*([^\n]+)(?=\n|$)'
+    speaker_pattern = r'(?:\n|^)([A-Za-z][^:\n]*[A-Za-z]|[A-Za-z]):[^\S\r\n]*([^\n]+)(?=\n|$)'
+    # speaker_pattern = r'(?:\n|^)([A-Za-z][A-Za-z_ -]*[A-Za-z]|[A-Za-z]):[^\S\r\n]*([^\n]+)(?=\n|$)'
     dialogue_pattern = r'"([^"]*)"'
     narration_pattern = r'([^"\n]+)'
 
