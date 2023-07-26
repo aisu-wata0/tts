@@ -38,8 +38,7 @@ class TtsVits(tts_utils.Tts):
 
     synthesis_parameters['content'] = text
 
-    url = self.get_url(speaker_id)
-    response = requests.post(url, json={
+    request_json = {
       "data": [
         synthesis_parameters['content'],
         synthesis_parameters['Language'],
@@ -48,7 +47,9 @@ class TtsVits(tts_utils.Tts):
         synthesis_parameters['length_scale'],
         synthesis_parameters['Symbol input'],
       ]
-    }).json()
+    }
+    url = self.get_url(speaker_id)
+    response = requests.post(url, json=request_json).json()
 
     data = response["data"]
     if data[0] != "Success":
