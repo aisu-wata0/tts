@@ -34,6 +34,8 @@ class TtsVits(tts_utils.Tts):
   
   def Synthesis(self, text, speaker_id=None, synthesis_parameters={}):
     speaker_id = self.get_speaker_id(speaker_id)
+    if not speaker_id:
+      return None
     synthesis_parameters = {**self.synthesis_parameters, **synthesis_parameters}
 
     synthesis_parameters['content'] = text
