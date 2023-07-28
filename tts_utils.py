@@ -90,6 +90,8 @@ class Tts:
     return self.SynthesisResponseSaveWav(synthesis_res, filepath)
 
   def SynthesisResponseSaveWav(self, wavData, filepath):
+    if not wavData:
+      return ""
     Path(filepath).parent.mkdir(parents=True, exist_ok=True)
     with open(filepath, "wb") as outfile:
       outfile.write(wavData)
