@@ -52,13 +52,16 @@ class TtsVits(tts_utils.Tts):
     }
     url = self.get_url(speaker_id)
     response = requests.post(url, json=request_json).json()
-
-    data = response["data"]
-    if data[0] != "Success":
-      raise RuntimeError(f'On Synthesis {speaker_id} content: """{text}"""' + data[0])
-    
-    data_prefix = "data:audio/wav;base64,"
-    base64_data = data[1][len(data_prefix):]
-    # Decode the base64 data
-    decoded_data = base64.b64decode(base64_data)
-    return decoded_data
+    try:
+      data = response["data"]
+      if data[0] != "Success":
+        raise RuntimeError(f'On Synthesis {speaker_id} content: """{text}"""' + data[0])
+      
+      data_prefix = "data:audio/wav;base64,"
+      base64_data = data[1][len(data_prefix):]
+      # Decode the base64 data
+      decoded_data = base64.b64decode(base64_data)
+      return decoded_data
+    except Exception as e:
+      print("Exception on Synthesis after response", response)
+      print(e)
